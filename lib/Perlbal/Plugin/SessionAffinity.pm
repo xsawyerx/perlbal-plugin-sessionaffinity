@@ -58,7 +58,8 @@ sub get_backend {
         or return;
 
     foreach my $backend ( @{ $svc->{'bored_backends'} } ) {
-        $ip_port eq $backend->{'ipport'} and return [$backend];
+        $ip_port eq $backend->{'ipport'}
+            and return [$backend];
     }
 
     return;
@@ -138,6 +139,7 @@ sub register {
 sub unregister {
     my ( $class, $svc ) = @_;
 
+    # TODO: are we using setters?
     $svc->unregister_hooks('SessionAffinity');
     $svc->unregister_setters('SessionAffinity');
 
@@ -177,15 +179,24 @@ it's the C<bored_backends> list, which is reserved just for connect-ahead
 backends, but it seems to work.
 
 The theory is that apparently Perlbal always finds the desired backend from
-that list even when the connect-ahead amount has been exhausted.
+that list even when the connect-ahead amount has been exhausted, so it should
+work. However, I do not promise anything, triple, quadruple and quintuple check
+it yourself.
+
+The cookie check is scheduled in the B<start_proxy_request> hook.
 
 =item * Cookie set
 
 Sets the session affinity cookie.
 
+The cookie set is scheduled in the B<modify_response_headers> and
+B<backend_response_received> hooks.
+
 =back
 
 =head2 unregister
+
+Unregister the hooks and setters.
 
 =head2 get_backend_id
 
