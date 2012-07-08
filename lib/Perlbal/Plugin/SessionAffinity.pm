@@ -58,8 +58,7 @@ sub get_backend {
         or return;
 
     foreach my $backend ( @{ $svc->{'bored_backends'} } ) {
-        $ip_port eq $backend->{'ipport'}
-            and return [$backend];
+        $ip_port eq $backend->{'ipport'} and return [$backend];
     }
 
     return;
@@ -162,6 +161,26 @@ to B<X-SERVERID> but it will be configurable in the future.
 
 =head2 register
 
+Registers two checks:
+
+=over 4
+
+=item * Cookie check
+
+It searches for the backend using the service and the current request's cookie.
+It then sets the possible backends list to what it found. It's a trick since
+it's the C<bored_backends> list, which is reserved just for connect-ahead
+backends, but it seems to work.
+
+The theory is that apparently Perlbal always finds the desired backend from
+that list even when the connect-ahead amount has been exhausted.
+
+=item * Cookie set
+
+Sets the session affinity cookie.
+
+=back
+
 =head2 unregister
 
 =head2 get_backend_id
@@ -178,6 +197,9 @@ This is currently considered a security risk, since the ID is sequential and
 substantially predictable.
 
 =head2 get_backend
+
+Gets the IP and port from a request's cookie and find the backend object we
+want.
 
 =head1 DEPENDENCIES
 
