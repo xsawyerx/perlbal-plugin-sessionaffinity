@@ -10,7 +10,115 @@ version 0.001
 
 =head1 SYNOPSIS
 
+    LOAD SessionAffinity
+
+    CREATE POOL backends
+      POOL backends ADD 10.20.20.100
+      POOL backends ADD 10.20.20.101
+      POOL backends ADD 10.20.20.102
+
+    CREATE SERVICE balancer
+      SET listen          = 0.0.0.0:80
+      SET role            = reverse_proxy
+      SET pool            = dynamic
+      SET persist_client  = on
+      SET persist_backend = on
+      SET verify_backend  = on
+      SET plugins         = sessionaffinity
+    ENABLE balancer
+
 =head1 DESCRIPTION
+
+L<Perlbal> doesn't support session affinity (or otherwise known as "sticky
+sessions") out of the box. There is a plugin on CPAN called
+L<Perlbal::Plugin::StickySessions> but there's a few problems with it:
+
+=over 4
+
+=item * It only supports sticky sessions for files
+
+It uses only one hook for adding cookies, which only applies to file fetching.
+This means that if you want sticky sessions for anything other than file
+fetching, you're fresh out of luck. :)
+
+B<However, this plugin> uses proper hooks to accomplish sticky sessions on
+each and every request.
+
+=item * It requires patches
+
+It depends on patches the author has prepared (that were not integrated) into
+the Perlbal core distribution. This means you need to apply these patches on
+every new version of Perlbal you're installing.
+
+B<However, this plugin> doesn't require B<any> patches.
+
+=item * It's outdated
+
+At least one of the patches provided with it is simply unnecessary anymore
+because the hook it adds was already added to Perlbal (at a little different
+location, though). Clearly it hasn't been updated in a while.
+
+B<However, this plugin> is up to date.
+
+=item * It's overkill/breakable/copy-pasta/ZOMGWTF?!
+
+It has a lot of code that is basically copy-pasted from some handling code in
+L<Perlbal> itself. This means that any code that is changed, needs to be
+updated in the module (every, single, time) which will suddenly become
+incompatible with previous versions.
+
+It's a lot of code that mostly likely isn't necessary and instead of
+refactoring where needed, and submit that to Perlbal, it was simply copied
+over, which is more than horrible.
+
+B<However, this plugin> is very thin and slim, contains no copy-pasted code
+and will not break future and previous versions every time Perlbal changes
+code.
+
+It does, however, plays with an attribute that isn't explicitly documented
+as public, though fully accessible. However, if Perlbal does indeed change it,
+this module should be successfully updated and might provide backwards
+compatibility (even though the author considers Perlbal's compatibility
+standards to be downright insane).
+
+=item * Observed breakage
+
+After looking into this, it seems as though gentleness is necessary, since
+the connect-ahead doesn't seem to be cleaning up, and more and more closed
+sessions are mounted.
+
+B<However, this plugin> does not use the method and therefore Perlbal itself
+is in charge and therefore does a proper job with closing and releasing
+connections.
+
+=item * Probable security risk
+
+It sets a cookie with a backend ID that is relevant to the backend order in
+the pool. By running enough requests you will eventually statistically find
+all possible backends in a given pool.
+
+You can also attack by a special-crafted cookie and measure the timings for
+requests to find when it probably does additional processing (since the
+backend is specified) to find how many backends exist in a given pool.
+
+I'll leave finding of more ways to exploit this security risk as an exercise
+to the reader.
+
+B<However, this plugin> will provide various ways to provide a backend ID
+(see below) in such a way that prevents a user from knowing how many backends
+exist.
+
+=item * Limited features
+
+It does not provide the user with a way to control how the backend ID is given
+to the user, nor does it give the user a way to fetch the backends. It only
+gets them using Perlbal, without allowing the user some options on that.
+
+B<However, this plugin> will give the user the ability to pick backends using
+either randomly, via an external class or semi-random (for the lack of a better
+name).
+
+=back
 
 =head1 ATTRIBUTES
 
@@ -25,7 +133,36 @@ to B<X-SERVERID> but it will be configurable in the future.
 
 =head2 register
 
+Registers two checks:
+
+=over 4
+
+=item * Cookie check
+
+It searches for the backend using the service and the current request's cookie.
+It then sets the possible backends list to what it found. It's a trick since
+it's the C<bored_backends> list, which is reserved just for connect-ahead
+backends, but it seems to work.
+
+The theory is that apparently Perlbal always finds the desired backend from
+that list even when the connect-ahead amount has been exhausted, so it should
+work. However, I do not promise anything, triple, quadruple and quintuple check
+it yourself.
+
+The cookie check is scheduled in the B<start_proxy_request> hook.
+
+=item * Cookie set
+
+Sets the session affinity cookie.
+
+The cookie set is scheduled in the B<modify_response_headers> and
+B<backend_response_received> hooks.
+
+=back
+
 =head2 unregister
+
+Unregister the hooks and setters.
 
 =head2 get_backend_id
 
@@ -42,6 +179,9 @@ substantially predictable.
 
 =head2 get_backend
 
+Gets the IP and port from a request's cookie and find the backend object we
+want.
+
 =head1 DEPENDENCIES
 
 =head2 Perlbal
@@ -55,6 +195,12 @@ To parse and create cookies.
 =head2 Digest::SHA
 
 To provide a SHA1 checksum in the future.
+
+=head1 SEE ALSO
+
+=head2 Perlbal::Plugin::StickySessions
+
+Try it and see why you would probably prefer this one. :)
 
 =head1 AUTHOR
 
