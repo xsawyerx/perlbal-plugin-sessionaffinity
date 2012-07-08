@@ -1,0 +1,69 @@
+=pod
+
+=head1 NAME
+
+Perlbal::Plugin::SessionAffinity - Sane session affinity (sticky sessions) for Perlbal
+
+=head1 VERSION
+
+version 0.001
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=head1 ATTRIBUTES
+
+These are future attributes:
+
+=head2 session_cookie_header
+
+The name of the cookie header for the session. It's currently hardcoded
+to B<X-SERVERID> but it will be configurable in the future.
+
+=head1 SUBROUTINES/METHODS
+
+=head2 register
+
+=head2 unregister
+
+=head2 get_backend_id
+
+Get a backend ID number. This is currently simply sequential, but will be
+very dynamic in the near future.
+
+=head2 get_ip_port
+
+Parses a request's cookies and finds the specific cookie relating to session
+affinity and get the server via the ID in the cookie.
+
+This is currently considered a security risk, since the ID is sequential and
+substantially predictable.
+
+=head2 get_backend
+
+=head1 DEPENDENCIES
+
+=head2 Perlbal
+
+Obviously.
+
+=head2 CGI::Cookies
+
+To parse and create cookies.
+
+=head2 Digest::SHA
+
+To provide a SHA1 checksum in the future.
+
+=head1 AUTHOR
+
+Sawyer X <xsawyerx@cpan.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2012 by Sawyer X.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
+
