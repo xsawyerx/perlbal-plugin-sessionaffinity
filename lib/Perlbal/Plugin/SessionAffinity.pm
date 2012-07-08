@@ -128,6 +128,10 @@ sub register {
         'SessionAffinity', 'modify_response_headers', $set_cookie,
     );
 
+    $gsvc->register_hook(
+        'SessionAffinity', 'backend_response_received', $set_cookie,
+    );
+
     return 1;
 }
 
