@@ -113,7 +113,7 @@ sub register {
 
                 $res->header( 'Set-Cookie' => $value );
             } else {
-                $res->header( 'Set-Cookie' => $backend_cookie );
+                $res->header( 'Set-Cookie' => $backend_cookie->as_string );
             }
         }
 
