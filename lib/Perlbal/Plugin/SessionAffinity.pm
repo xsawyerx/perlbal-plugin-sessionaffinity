@@ -148,12 +148,8 @@ sub register {
             $loaded_classes{$class}++;
         }
 
-use DDP;
-p %loaded_classes;
-        print "Getting backend id\n";
         my $backend_id = $class->can("get_backend_id")
                                ->( $backend, $create_id );
-        p $backend_id;
 
         if ( ! defined $cookies{$cookie_hdr} ||
              $cookies{$cookie_hdr}->value ne $backend_id ) {
@@ -179,10 +175,6 @@ p %loaded_classes;
 
     $gsvc->register_hook(
         'SessionAffinity', 'start_proxy_request', $check_cookie,
-    );
-
-    $gsvc->register_hook(
-        'SessionAffinity', 'modify_response_headers', $set_cookie,
     );
 
     $gsvc->register_hook(
@@ -235,12 +227,12 @@ L<Perlbal::Plugin::StickySessions> but there's a few problems with it:
 
 =item * It only supports sticky sessions for files
 
-It uses only one hook for adding cookies, which only applies to file fetching.
-This means that if you want sticky sessions for anything other than file
-fetching, you're fresh out of luck. :)
+The hook it uses for adding cookies only applies to file fetching. This means
+that if you want sticky sessions for anything other than file fetching, you're
+fresh out of luck. :)
 
-B<However, this plugin> uses proper hooks to accomplish sticky sessions on
-each and every request.
+B<However, this plugin> uses (hopefully) the proper hook to accomplish sticky
+sessions on each and every request.
 
 =item * It requires patches
 
@@ -333,7 +325,7 @@ to B<X-SERVERID> but it will be configurable in the future.
 
 =head2 register
 
-Registers two checks:
+Registers two events:
 
 =over 4
 
@@ -355,8 +347,7 @@ The cookie check is scheduled in the B<start_proxy_request> hook.
 
 Sets the session affinity cookie.
 
-The cookie set is scheduled in the B<modify_response_headers> and
-B<backend_response_received> hooks.
+The cookie set is scheduled in the B<backend_response_received> hook.
 
 =back
 
