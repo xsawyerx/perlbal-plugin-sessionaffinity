@@ -3,30 +3,56 @@ use warnings;
 package Perlbal::Plugin::SessionAffinity;
 # ABSTRACT: Sane session affinity (sticky sessions) for Perlbal
 
+use Carp;
 use Perlbal;
 use CGI::Cookie;
 use Digest::SHA 'sha1_hex';
 
-sub load   {1}
-sub unload {1}
+my $cookie_hdr = 'X-SERVERID';
+my $id_type    = 'Sequential';
+my $salt       = join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
+my $create_id  = sub {
+    my $ip = shift;
+    return sha1_hex( $salt . $ip );
+};
 
-my $cookie_hdr = 'X-SERVERID'; # FIXME: make this configurable
+my %loaded_classes = ();
 
-sub get_backend_id {
-    my $backend = shift;
-    my @nodes   = @{ $backend->{'service'}{'pool'}{'nodes'} };
+sub load   {
+    # the name of header in the cookie that stores the backend ID
+    Perlbal::register_global_hook(
+        'manage_command.affinity_cookie_header', sub {
+            my $mc = shift->parse(qr/^affinity_cookie_header\s+=\s+(.+)\s*$/,
+                      "usage: AFFINITY_COOKIE_HEADER = <name>");
 
-    # find the id of the node
-    # (index number, starting from 1)
-    foreach my $i ( 0 .. scalar @nodes ) {
-        my ( $ip, $port ) = @{ $nodes[$i] };
+            ($cookie_hdr) = $mc->args;
 
-        if ( $backend->{'ipport'} eq "$ip:$port" ) {
-            return $i + 1;
-        }
-    }
+            return $mc->ok;
+        },
+    );
 
-    # default to first backend in node list
+    Perlbal::register_global_hook(
+        'manage_command.affinity_id_type', sub {
+            my $mc = shift->parse(qr/^affinity_id_type\s+=\s+(.+)\s*$/,
+                      "usage: AFFINITY_ID_TYPE = <type>");
+
+            ($id_type) = $mc->args;
+
+            return $mc->ok;
+        },
+    );
+
+    Perlbal::register_global_hook(
+        'manage_command.affinity_salt', sub {
+            my $mc = shift->parse(qr/^affinity_salt\s+=\s+(.+)\s*$/,
+                      "usage: AFFINITY_SALT = <salt>");
+
+            ($salt) = $mc->args;
+
+            return $mc->ok;
+        },
+    );
+
     return 1;
 }
 
@@ -41,10 +67,10 @@ sub get_ip_port {
         %cookies = CGI::Cookie->parse($cookie);
 
         if ( defined $cookies{$cookie_hdr} ) {
-            my $server_id = $cookies{$cookie_hdr}->value - 1;
-            my $value     = $svc->{'pool'}{'nodes'}[$server_id];
+            my $id      = $cookies{$cookie_hdr}->value;
+            my $backend = find_backend_by_id( $svc, $id );
 
-            ref $value and return join ':', @{$value};
+            ref $backend and return join ':', @{$backend};
         }
     }
 
@@ -60,6 +86,20 @@ sub get_backend {
     foreach my $backend ( @{ $svc->{'bored_backends'} } ) {
         $ip_port eq $backend->{'ipport'}
             and return [$backend];
+    }
+
+    return;
+}
+
+sub find_backend_by_id {
+    my ( $svc, $id ) = @_;
+
+    foreach my $backend ( @{ $svc->{'pool'}{'nodes'} } ) {
+        my $bid = $create_id->( $backend->[0] );
+
+        if ( $bid eq $id ) {
+            return $backend;
+        }
     }
 
     return;
@@ -98,10 +138,26 @@ sub register {
             %cookies = CGI::Cookie->parse($cookie);
         }
 
-        my $backend_id = get_backend_id($backend);
+        my $class = "Perlbal::Plugin::SessionAffinity::$id_type";
+
+        if ( ! exists $loaded_classes{$class} ) {
+            local $@ = undef;
+            eval "use $class";
+            $@ and croak "Cannot load $class\n";
+
+            $loaded_classes{$class}++;
+        }
+
+use DDP;
+p %loaded_classes;
+        print "Getting backend id\n";
+        my $backend_id = $class->can("get_backend_id")
+                               ->( $backend, $create_id );
+        p $backend_id;
 
         if ( ! defined $cookies{$cookie_hdr} ||
-            $cookies{$cookie_hdr}->value != $backend_id ) {
+             $cookies{$cookie_hdr}->value ne $backend_id ) {
+
             my $backend_cookie = CGI::Cookie->new(
                 -name  => $cookie_hdr,
                 -value => $backend_id,
@@ -246,15 +302,17 @@ backend is specified) to find how many backends exist in a given pool.
 I'll leave finding of more ways to exploit this security risk as an exercise
 to the reader.
 
-B<However, this plugin> will provide various ways to provide a backend ID
-(see below) in such a way that prevents a user from knowing how many backends
-exist.
+B<However, this plugin> uses L<Digest::SHA> with a randomly-created salt
+(and the user can change that) to keep the backend ID value in the cookie.
+
+By allowing you to change the cookie header name and the way the value is
+presented, it would be more difficult for an attacker to understand what the
+header represents.
 
 =item * Limited features
 
-It does not provide the user with a way to control how the backend ID is given
-to the user, nor does it give the user a way to fetch the backends. It only
-gets them using Perlbal, without allowing the user some options on that.
+It does not provide the user with a way to control how the backend is picked.
+It only gets them using Perlbal.
 
 B<However, this plugin> will give the user the ability to pick backends using
 either randomly, via an external class or semi-random (for the lack of a better
@@ -324,6 +382,10 @@ substantially predictable.
 Gets the IP and port from a request's cookie and find the backend object we
 want.
 
+=head2 find_backend_by_id
+
+Given a SHA1 ID, find the correct backend to which it belongs.
+
 =head1 DEPENDENCIES
 
 =head2 Perlbal
@@ -336,7 +398,11 @@ To parse and create cookies.
 
 =head2 Digest::SHA
 
-To provide a SHA1 checksum in the future.
+To provide a SHA1 checksum.
+
+=head2 Carp
+
+To provide croak. It's core, don't worry.
 
 =head1 SEE ALSO
 
