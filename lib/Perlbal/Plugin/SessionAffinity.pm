@@ -5,6 +5,7 @@ package Perlbal::Plugin::SessionAffinity;
 
 use Carp;
 use Perlbal;
+use Perlbal::BackendHTTP;
 use CGI::Cookie;
 use Digest::SHA 'sha1_hex';
 
@@ -83,6 +84,7 @@ sub get_backend {
     my $ip_port = get_ip_port( $svc, $req )
         or return;
 
+    # return backend object
     foreach my $backend ( @{ $svc->{'bored_backends'} } ) {
         $ip_port eq $backend->{'ipport'}
             and return [$backend];
@@ -110,21 +112,62 @@ sub register {
 
     my $check_cookie = sub {
         my $client = shift;
-        my $req    = $client->{'req_headers'};
-
-        defined $req or return 0;
+        my $req    = $client->{'req_headers'} or return 0;
 
         my $svc = $client->{'service'};
 
-        if ( my $backend = get_backend( $svc, $req ) ) {
-            $svc->{'bored_backends'} = $backend;
+        if ( my $backends = get_backend( $svc, $req ) ) {
+            # set bored backend
+            $svc->{'bored_backends'} = $backends;
+
+            # let Perlbal continue from here
+            return 0;
         }
 
-        return 0;
+        my $ip_port = get_ip_port( $svc, $req )
+            or return 0;
+
+        # try and find a pending open connection that isn't bored yet
+        # also clean up pending connects while we're at it
+        # which is just cargo-culted from Perlbal
+        if ( my $be = $svc->{'pending_connects'}{$ip_port} ) {
+            my $age = time - $be->{'create_time'};
+
+            if ( $age >= 5 && $be->{'state'} eq 'connecting' ) {
+                $be->close('connect_timeout');
+            } elsif ( $age >= 60 && $be->{'state'} eq 'verifying_backend' ) {
+                # after 60 seconds of attempting to verify
+                # we're probably already dead
+                $be->close('verify_timeout');
+            } elsif ( ! $be->{'closed'} ) {
+                # this should recalled so it should already be available
+                $be->assign_client($client);
+
+                # the event loop will handle it
+                # ask Perlbal to step down
+                return 1;
+            }
+        }
+
+        # couldn't find open connection
+        # create a new server connection
+        my ( $ip, $port ) = split /:/, $ip_port;
+        my $backend       = Perlbal::BackendHTTP->new(
+            $svc, $ip, $port,
+            {
+                pool     => $svc->{'pool'},
+                reportto => $svc,
+            }
+        ) or return 0;
+
+        $svc->add_pending_connect($backend);
+        $backend->assign_client($client);
+
+        return 1;
     };
 
     my $set_cookie = sub {
-        my $backend  = shift;
+        my $backend  = shift; # Perlbal::BackendHTTP
         my $res      = $backend->{'res_headers'};
         my $req      = $backend->{'req_headers'};
 
