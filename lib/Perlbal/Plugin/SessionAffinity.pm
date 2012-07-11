@@ -13,13 +13,14 @@ my $cookie_hdr = 'X-SERVERID';
 my $id_type    = 'Sequential';
 my $salt       = join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
 my $create_id  = sub {
-    my $ip = shift;
-    return sha1_hex( $salt . $ip );
+    my $ip   = shift;
+    my $port = shift || '';
+    return sha1_hex( $salt . $ip . $port );
 };
 
 my %loaded_classes = ();
 
-sub load   {
+sub load {
     # the name of header in the cookie that stores the backend ID
     Perlbal::register_global_hook(
         'manage_command.affinity_cookie_header', sub {
@@ -78,26 +79,11 @@ sub get_ip_port {
     return;
 }
 
-sub get_backend {
-    my ( $svc, $req ) = @_;
-
-    my $ip_port = get_ip_port( $svc, $req )
-        or return;
-
-    # return backend object
-    foreach my $backend ( @{ $svc->{'bored_backends'} } ) {
-        $ip_port eq $backend->{'ipport'}
-            and return [$backend];
-    }
-
-    return;
-}
-
 sub find_backend_by_id {
     my ( $svc, $id ) = @_;
 
     foreach my $backend ( @{ $svc->{'pool'}{'nodes'} } ) {
-        my $bid = $create_id->( $backend->[0] );
+        my $bid = $create_id->( @{$backend} );
 
         if ( $bid eq $id ) {
             return $backend;
@@ -113,57 +99,68 @@ sub register {
     my $check_cookie = sub {
         my $client = shift;
         my $req    = $client->{'req_headers'} or return 0;
+        my $svc    = $client->{'service'};
+        my $pool   = $svc->{'pool'};
 
-        my $svc = $client->{'service'};
+        # make sure all nodes in this service have their own pool
+        foreach my $node ( @{ $pool->{'nodes'} } ) {
+            my ( $ip, $port ) = @{$node};
 
-        if ( my $backends = get_backend( $svc, $req ) ) {
-            # set bored backend
-            $svc->{'bored_backends'} = $backends;
+            # pool
+            my $pid = $create_id->( $ip, $port );
+            exists $Perlbal::pool{$pid} and next;
 
-            # let Perlbal continue from here
-            return 0;
+            my $nodepool = Perlbal::Pool->new($pid);
+            $nodepool->add( $ip, $port );
+            $Perlbal::pool{$pid} = $nodepool;
+
+            # service
+            my $sid = "${pid}_service";
+            exists $Perlbal::service{$sid} and next;
+
+            my $nodeservice = Perlbal->create_service($sid);
+            my $svc_role    = $svc->{'role'};
+
+            # role sets up constraints for the rest
+            # so it goes first
+            $nodeservice->set( role => $svc_role );
+
+            foreach my $tunable_name ( keys %{$Perlbal::Service::tunables} ) {
+                # skip role because we had already set it
+                $tunable_name eq 'role' and next;
+
+                # persist_client_timeout is DEPRECATED
+                # but not marked anywhere as deprecated. :(
+                # (well, nowhere we can actually predictably inspect)
+                $tunable_name eq 'persist_client_timeout' and next; 
+
+                # we skip the pool because we're gonna set it to a specific one
+                $tunable_name eq 'pool' and next;
+
+                # make sure svc has value for this tunable
+                defined $svc->{$tunable_name} or next;
+
+                my $tunable = $Perlbal::Service::tunables->{$tunable_name};
+                my $role    = $tunable->{'check_role'};
+
+                if ( $role eq '*' || $role eq $svc_role ) {
+                    $nodeservice->set( $tunable_name, $svc->{$tunable_name} );
+                }
+            }
+
+            $nodeservice->set( pool => $pid );
+
+            $Perlbal::service{$sid} = $nodeservice;
         }
 
         my $ip_port = get_ip_port( $svc, $req )
             or return 0;
 
-        # try and find a pending open connection that isn't bored yet
-        # also clean up pending connects while we're at it
-        # which is just cargo-culted from Perlbal
-        if ( my $be = $svc->{'pending_connects'}{$ip_port} ) {
-            my $age = time - $be->{'create_time'};
+        my $req_pool_id = $create_id->( split /:/, $ip_port );
+        my $req_svc     = $Perlbal::service{"${req_pool_id}_service"};
+        $client->{'service'} = $req_svc;
 
-            if ( $age >= 5 && $be->{'state'} eq 'connecting' ) {
-                $be->close('connect_timeout');
-            } elsif ( $age >= 60 && $be->{'state'} eq 'verifying_backend' ) {
-                # after 60 seconds of attempting to verify
-                # we're probably already dead
-                $be->close('verify_timeout');
-            } elsif ( ! $be->{'closed'} ) {
-                # this should recalled so it should already be available
-                $be->assign_client($client);
-
-                # the event loop will handle it
-                # ask Perlbal to step down
-                return 1;
-            }
-        }
-
-        # couldn't find open connection
-        # create a new server connection
-        my ( $ip, $port ) = split /:/, $ip_port;
-        my $backend       = Perlbal::BackendHTTP->new(
-            $svc, $ip, $port,
-            {
-                pool     => $svc->{'pool'},
-                reportto => $svc,
-            }
-        ) or return 0;
-
-        $svc->add_pending_connect($backend);
-        $backend->assign_client($client);
-
-        return 1;
+        return 0;
     };
 
     my $set_cookie = sub {
@@ -410,11 +407,6 @@ affinity and get the server via the ID in the cookie.
 
 This is currently considered a security risk, since the ID is sequential and
 substantially predictable.
-
-=head2 get_backend
-
-Gets the IP and port from a request's cookie and find the backend object we
-want.
 
 =head2 find_backend_by_id
 
