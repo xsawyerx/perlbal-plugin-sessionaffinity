@@ -20,12 +20,12 @@ sub get_backend_id {
         my ( $ip, $port ) = @{ $nodes[$i] };
 
         if ( $backend->{'ipport'} eq "$ip:$port" ) {
-            return $create_id->($ip);
+            return $create_id->( $ip, $port );
         }
     }
 
     # default to first backend in node list
-    return $create_id->( $nodes[0][0] );
+    return $create_id->( @{ $nodes[0] } );
 }
 
 1;
