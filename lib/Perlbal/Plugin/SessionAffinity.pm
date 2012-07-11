@@ -250,7 +250,7 @@ __END__
     CREATE SERVICE balancer
       SET listen          = 0.0.0.0:80
       SET role            = reverse_proxy
-      SET pool            = dynamic
+      SET pool            = backends
       SET persist_client  = on
       SET persist_backend = on
       SET verify_backend  = on
@@ -383,7 +383,8 @@ A new service is created using configurations from the existing service. The
 more interesting details is that reuse is emphasized so no new sockets are
 created and instead this new service uses the already existing sockets (along
 with existing connections) instead of firing new ones. It doesn't open a new
-listening or anything like that. Yes, it's insanely cool, I know! :)
+listening or anything like that. This also means your SSL connections work
+seamlessly. Yes, it's insanely cool, I know! :)
 
 =head1 ATTRIBUTES
 
