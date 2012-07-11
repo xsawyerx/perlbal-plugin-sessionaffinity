@@ -20,7 +20,7 @@ my $create_id  = sub {
 
 my %loaded_classes = ();
 
-sub load   {
+sub load {
     # the name of header in the cookie that stores the backend ID
     Perlbal::register_global_hook(
         'manage_command.affinity_cookie_header', sub {
@@ -74,21 +74,6 @@ sub get_ip_port {
 
             ref $backend and return join ':', @{$backend};
         }
-    }
-
-    return;
-}
-
-sub get_backend {
-    my ( $svc, $req ) = @_;
-
-    my $ip_port = get_ip_port( $svc, $req )
-        or return;
-
-    # return backend object
-    foreach my $backend ( @{ $svc->{'bored_backends'} } ) {
-        $ip_port eq $backend->{'ipport'}
-            and return [$backend];
     }
 
     return;
@@ -422,11 +407,6 @@ affinity and get the server via the ID in the cookie.
 
 This is currently considered a security risk, since the ID is sequential and
 substantially predictable.
-
-=head2 get_backend
-
-Gets the IP and port from a request's cookie and find the backend object we
-want.
 
 =head2 find_backend_by_id
 
