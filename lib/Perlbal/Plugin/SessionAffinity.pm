@@ -389,10 +389,22 @@ seamlessly. Yes, it's insanely cool, I know! :)
 
 These are future attributes:
 
-=head2 session_cookie_header
+=head2 affinity_cookie_header
 
-The name of the cookie header for the session. It's currently hardcoded
-to B<X-SERVERID> but it will be configurable in the future.
+The name of the cookie header for the session.
+
+Default: B<X-SERVERID>.
+
+=head2 affinity_salt
+
+The salt that is used to create the backend's SHA1 IDs.
+
+Default: the following code is run when you load
+L<Perlbal::Plugin::SessionAffinity> to create the salt on start up:
+
+    join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
+
+If you want predictability, you can override the salt.
 
 =head1 SUBROUTINES/METHODS
 
