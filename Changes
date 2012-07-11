@@ -1,4 +1,5 @@
 Revision history for Perl extension Perlbal::Plugin::SessionAffinity
 
-0.001
+0.001   11.07.12
+        * Works, damn it!
 
