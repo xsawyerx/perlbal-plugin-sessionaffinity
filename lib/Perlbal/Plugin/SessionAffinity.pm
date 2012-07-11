@@ -261,7 +261,14 @@ __END__
 
 L<Perlbal> doesn't support session affinity (or otherwise known as "sticky
 sessions") out of the box. There is a plugin on CPAN called
-L<Perlbal::Plugin::StickySessions> but there's a few problems with it:
+L<Perlbal::Plugin::StickySessions> but there's a few problems with it.
+
+This plugin should be do a much better job. Go ahead and read why you should
+use this one and how it works.
+
+=head1 WHY YOU SHOULD USE IT
+
+Here is a list of problems with the other implementation of sticky sessions:
 
 =over 4
 
@@ -305,27 +312,20 @@ B<However, this plugin> is very thin and slim, contains no copy-pasted code
 and will not break future and previous versions every time Perlbal changes
 code.
 
-It does, however, plays with an attribute that isn't explicitly documented
-as public, though fully accessible. However, if Perlbal does indeed change it,
-this module should be successfully updated and might provide backwards
-compatibility (even though the author considers Perlbal's compatibility
-standards to be downright insane).
-
 =item * Observed breakage
 
 After looking into this, it seems as though gentleness is necessary, since
 the connect-ahead doesn't seem to be cleaning up, and more and more closed
 sessions are mounted.
 
-B<However, this plugin> does not use the method and therefore Perlbal itself
-is in charge and therefore does a proper job with closing and releasing
-connections.
+B<However, this plugin> does not use the method, keeping Perlbal itself in
+charge and which allows proper closing and releasing of connections.
 
 =item * Probable security risk
 
-It sets a cookie with a backend ID that is relevant to the backend order in
-the pool. By running enough requests you will eventually statistically find
-all possible backends in a given pool.
+It sets a cookie with a backend ID that correlates to the backend order in
+the pool. This means that you can simply run requests with different backend
+IDs and easily find the number of backends in a pool.
 
 You can also attack by a special-crafted cookie and measure the timings for
 requests to find when it probably does additional processing (since the
@@ -335,11 +335,12 @@ I'll leave finding of more ways to exploit this security risk as an exercise
 to the reader.
 
 B<However, this plugin> uses L<Digest::SHA> with a randomly-created salt
-(and the user can change that) to keep the backend ID value in the cookie.
+on each start-up (which the user can explicitly specify, if it seeks
+predictability) to keep the backend ID value in the cookie.
 
 By allowing you to change the cookie header name and the way the value is
 presented, it would be more difficult for an attacker to understand what the
-header represents.
+header represents, and how many backends exist (since there is no counter).
 
 =item * Limited features
 
@@ -347,10 +348,42 @@ It does not provide the user with a way to control how the backend is picked.
 It only gets them using Perlbal.
 
 B<However, this plugin> will give the user the ability to pick backends using
-either randomly, via an external class or semi-random (for the lack of a better
-name).
+either randomly, via an external class or others.
 
 =back
+
+=head1 HOW DOES IT WORK
+
+=head2 Basic stuff
+
+Basically, the module creates a SHA1 checksum for each backend node, and
+provides the user with a cookie request. If the user provides that cookie in
+return, it will try and find and provide the user with that specific node.
+
+If the node is no longer in the service's pool, or the cookie matches a node
+that doesn't exist, it will provide the user with a cookie again.
+
+=head2 Advanced stuff
+
+The plugin sets up dedicated pools and services for each service's node. This
+is required since Perlbal has no way of actually allowing you to specify the
+node a user will go to, only the service. Not to worry, this creation is done
+lazily so it saves as much memory as it can. In the future it might save even
+more.
+
+When a user comes in with a cookie of a node that exist in the service's pool
+it will create a pool for it (if one doesn't exist), and a matching service
+for it (if one doesn't exist) and then direct to user to it.
+
+The check against nodes and pools is done live and not against the static
+configuration file. This means that if you're playing some trickery on pools
+(changing them live), it will still work fine.
+
+A new service is created using configurations from the existing service. The
+more interesting details is that reuse is emphasized so no new sockets are
+created and instead this new service uses the already existing sockets (along
+with existing connections) instead of firing new ones. It doesn't open a new
+listening or anything like that. Yes, it's insanely cool, I know! :)
 
 =head1 ATTRIBUTES
 
@@ -365,35 +398,11 @@ to B<X-SERVERID> but it will be configurable in the future.
 
 =head2 register
 
-Registers two events:
-
-=over 4
-
-=item * Cookie check
-
-It searches for the backend using the service and the current request's cookie.
-It then sets the possible backends list to what it found. It's a trick since
-it's the C<bored_backends> list, which is reserved just for connect-ahead
-backends, but it seems to work.
-
-The theory is that apparently Perlbal always finds the desired backend from
-that list even when the connect-ahead amount has been exhausted, so it should
-work. However, I do not promise anything, triple, quadruple and quintuple check
-it yourself.
-
-The cookie check is scheduled in the B<start_proxy_request> hook.
-
-=item * Cookie set
-
-Sets the session affinity cookie.
-
-The cookie set is scheduled in the B<backend_response_received> hook.
-
-=back
+Registers our events.
 
 =head2 unregister
 
-Unregister the hooks and setters.
+Unregister our hooks and setters events.
 
 =head2 get_backend_id
 
@@ -403,10 +412,7 @@ very dynamic in the near future.
 =head2 get_ip_port
 
 Parses a request's cookies and finds the specific cookie relating to session
-affinity and get the server via the ID in the cookie.
-
-This is currently considered a security risk, since the ID is sequential and
-substantially predictable.
+affinity and get the backend details via the ID in the cookie.
 
 =head2 find_backend_by_id
 
