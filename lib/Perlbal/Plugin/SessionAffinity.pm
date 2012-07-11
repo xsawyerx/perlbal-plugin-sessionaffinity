@@ -5,7 +5,6 @@ package Perlbal::Plugin::SessionAffinity;
 
 use Carp;
 use Perlbal;
-use Perlbal::BackendHTTP;
 use CGI::Cookie;
 use Digest::SHA 'sha1_hex';
 
