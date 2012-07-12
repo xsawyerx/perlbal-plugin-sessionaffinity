@@ -1,5 +1,14 @@
 Revision history for Perl extension Perlbal::Plugin::SessionAffinity
 
+0.002   12.07.12
+        * affinity_cookie_header and affinity_salt are now production.
+          (the worked before, but now they're documented to be working)
+        * Removing pluggable fetching of backends since Perlbal already
+          picks them up without asking us and the user should actually
+          play with the pool if s/he want such stuff.
+        * Lots of code fixups/cleanups.
+        * Some docs fixups. Expect more. :)
+
 0.001   11.07.12
         * Works, damn it!
 
