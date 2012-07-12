@@ -35,44 +35,6 @@ sub find_node {
     return;
 }
 
-sub load {
-    # the name of header in the cookie that stores the backend ID
-    Perlbal::register_global_hook(
-        'manage_command.affinity_cookie_header', sub {
-            my $mc = shift->parse(qr/^affinity_cookie_header\s+=\s+(.+)\s*$/,
-                      "usage: AFFINITY_COOKIE_HEADER = <name>");
-
-            ($cookie_hdr) = $mc->args;
-
-            return $mc->ok;
-        },
-    );
-
-    Perlbal::register_global_hook(
-        'manage_command.affinity_id_type', sub {
-            my $mc = shift->parse(qr/^affinity_id_type\s+=\s+(.+)\s*$/,
-                      "usage: AFFINITY_ID_TYPE = <type>");
-
-            ($id_type) = $mc->args;
-
-            return $mc->ok;
-        },
-    );
-
-    Perlbal::register_global_hook(
-        'manage_command.affinity_salt', sub {
-            my $mc = shift->parse(qr/^affinity_salt\s+=\s+(.+)\s*$/,
-                      "usage: AFFINITY_SALT = <salt>");
-
-            ($salt) = $mc->args;
-
-            return $mc->ok;
-        },
-    );
-
-    return 1;
-}
-
 # get the ip and port of the requested backend from the cookie
 sub get_ip_port {
     my ( $svc, $req ) = @_;
@@ -114,6 +76,44 @@ sub find_backend_by_id {
     }
 
     return;
+}
+
+sub load {
+    # the name of header in the cookie that stores the backend ID
+    Perlbal::register_global_hook(
+        'manage_command.affinity_cookie_header', sub {
+            my $mc = shift->parse(qr/^affinity_cookie_header\s+=\s+(.+)\s*$/,
+                      "usage: AFFINITY_COOKIE_HEADER = <name>");
+
+            ($cookie_hdr) = $mc->args;
+
+            return $mc->ok;
+        },
+    );
+
+    Perlbal::register_global_hook(
+        'manage_command.affinity_id_type', sub {
+            my $mc = shift->parse(qr/^affinity_id_type\s+=\s+(.+)\s*$/,
+                      "usage: AFFINITY_ID_TYPE = <type>");
+
+            ($id_type) = $mc->args;
+
+            return $mc->ok;
+        },
+    );
+
+    Perlbal::register_global_hook(
+        'manage_command.affinity_salt', sub {
+            my $mc = shift->parse(qr/^affinity_salt\s+=\s+(.+)\s*$/,
+                      "usage: AFFINITY_SALT = <salt>");
+
+            ($salt) = $mc->args;
+
+            return $mc->ok;
+        },
+    );
+
+    return 1;
 }
 
 sub register {
