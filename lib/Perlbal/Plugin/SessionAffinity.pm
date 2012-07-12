@@ -9,31 +9,9 @@ use CGI::Cookie;
 use Digest::SHA 'sha1_hex';
 
 my $cookie_hdr     = 'X-SERVERID';
-my $node_fetching  = 'Simple';
 my $salt           = join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
 my $arrayref       = ref [];
 my %loaded_classes = ();
-
-# get a full backend object
-# and try to find a node in the backend's pool
-sub find_node {
-    my $backend = shift;
-    my @nodes   = @{ $backend->{'service'}{'pool'}{'nodes'} };
-
-    foreach my $node (@nodes) {
-        defined $node && ref $node && ref $node eq $arrayref
-            or next;
-
-        my ( $ip, $port ) = @{$node};
-
-        if ( $backend->{'ipport'} eq "$ip:$port" ) {
-            return [ $ip, $port ];
-        }
-    }
-
-    # explicit return FTW
-    return;
-}
 
 # get the ip and port of the requested backend from the cookie
 sub get_ip_port {
@@ -187,32 +165,15 @@ sub register {
     };
 
     my $set_cookie = sub {
-        my $backend  = shift; # Perlbal::BackendHTTP
-        my $res      = $backend->{'res_headers'};
-        my $req      = $backend->{'req_headers'};
+        my $backend = shift; # Perlbal::BackendHTTP
+        my $res     = $backend->{'res_headers'};
+        my $req     = $backend->{'req_headers'};
+        my $svc     = $backend->{'service'};
 
         defined $backend && defined $res
             or return 0;
 
-        my $svc     = $backend->{'service'};
-        my $class = "Perlbal::Plugin::SessionAffinity::$node_fetching";
-
-        if ( ! exists $loaded_classes{$class} ) {
-            local $@ = undef;
-            eval "use $class";
-            $@ and croak "Cannot load $class\n";
-
-            $loaded_classes{$class}++;
-        }
-
-        # try to find that specific backend
-        # or get a new one
-        my $node = find_node($backend) ||
-                   $class->can('get_backend')
-                         ->($backend)
-            or return 0;
-
-        my $backend_id = create_id( @{$node} ) || '';
+        my $backend_id = create_id( split /:/, $backend->{'ipport'} );
         my %cookies    = ();
 
         if ( my $cookie = $req->header('Cookie') ) {
