@@ -9,7 +9,7 @@ use CGI::Cookie;
 use Digest::SHA 'sha1_hex';
 
 my $cookie_hdr     = 'X-SERVERID';
-my $id_type        = 'Sequential';
+my $id_type        = 'Simple';
 my $salt           = join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
 my %loaded_classes = ();
 

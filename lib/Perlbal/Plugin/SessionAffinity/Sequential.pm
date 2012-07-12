@@ -1,7 +1,7 @@
 use strict;
 use warnings;
-package Perlbal::Plugin::SessionAffinity::Sequential;
-# ABSTRACT: Sequential backend IDs
+package Perlbal::Plugin::SessionAffinity::Simple;
+# ABSTRACT: Simple backend fetching
 
 my $ref = ref [];
 
