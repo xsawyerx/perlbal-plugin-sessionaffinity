@@ -5,7 +5,8 @@ package Perlbal::Plugin::SessionAffinity::Simple;
 
 sub get_backend {
     my $backend = shift;
-    return $backend->{'service'}{'pool'}{'nodes'}[0];
+    my $node    = $backend->{'service'}{'pool'}{'nodes'}[0];
+    return $node;
 }
 
 1;

@@ -9,7 +9,7 @@ use CGI::Cookie;
 use Digest::SHA 'sha1_hex';
 
 my $cookie_hdr     = 'X-SERVERID';
-my $id_type        = 'Simple';
+my $node_fetching  = 'Simple';
 my $salt           = join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
 my $arrayref       = ref [];
 my %loaded_classes = ();
@@ -92,11 +92,11 @@ sub load {
     );
 
     Perlbal::register_global_hook(
-        'manage_command.affinity_id_type', sub {
-            my $mc = shift->parse(qr/^affinity_id_type\s+=\s+(.+)\s*$/,
+        'manage_command.affinity_node_fetching', sub {
+            my $mc = shift->parse(qr/^affinity_node_fetching\s+=\s+(.+)\s*$/,
                       "usage: AFFINITY_ID_TYPE = <type>");
 
-            ($id_type) = $mc->args;
+            ($node_fetching) = $mc->args;
 
             return $mc->ok;
         },
@@ -195,13 +195,7 @@ sub register {
             or return 0;
 
         my $svc     = $backend->{'service'};
-        my %cookies = ();
-
-        if ( my $cookie = $req->header('Cookie') ) {
-            %cookies = CGI::Cookie->parse($cookie);
-        }
-
-        my $class = "Perlbal::Plugin::SessionAffinity::$id_type";
+        my $class = "Perlbal::Plugin::SessionAffinity::$node_fetching";
 
         if ( ! exists $loaded_classes{$class} ) {
             local $@ = undef;
@@ -219,6 +213,11 @@ sub register {
             or return 0;
 
         my $backend_id = create_id( @{$node} ) || '';
+        my %cookies    = ();
+
+        if ( my $cookie = $req->header('Cookie') ) {
+            %cookies = CGI::Cookie->parse($cookie);
+        }
 
         if ( ! defined $cookies{$cookie_hdr} ||
              $cookies{$cookie_hdr}->value ne $backend_id ) {
