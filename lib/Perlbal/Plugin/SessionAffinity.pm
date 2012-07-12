@@ -8,10 +8,8 @@ use Perlbal;
 use CGI::Cookie;
 use Digest::SHA 'sha1_hex';
 
-my $cookie_hdr     = 'X-SERVERID';
-my $salt           = join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
-my $arrayref       = ref [];
-my %loaded_classes = ();
+my $cookie_hdr = 'X-SERVERID';
+my $salt       = join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
 
 # get the ip and port of the requested backend from the cookie
 sub get_ip_port {
@@ -64,17 +62,6 @@ sub load {
                       "usage: AFFINITY_COOKIE_HEADER = <name>");
 
             ($cookie_hdr) = $mc->args;
-
-            return $mc->ok;
-        },
-    );
-
-    Perlbal::register_global_hook(
-        'manage_command.affinity_node_fetching', sub {
-            my $mc = shift->parse(qr/^affinity_node_fetching\s+=\s+(.+)\s*$/,
-                      "usage: AFFINITY_ID_TYPE = <type>");
-
-            ($node_fetching) = $mc->args;
 
             return $mc->ok;
         },
@@ -334,11 +321,11 @@ header represents, and how many backends exist (since there is no counter).
 
 =item * Limited features
 
-It does not provide the user with a way to control how the backend is picked.
-It only gets them using Perlbal.
+It does not provide the user with a way to control how the header name used
+to keep the IDs.
 
-B<However, this plugin> will give the user the ability to pick backends using
-either randomly, via an external class or others.
+B<However, this plugin> gives the user the ability to pick the header name
+of the backend ID.
 
 =back
 
@@ -358,23 +345,22 @@ that doesn't exist, it will provide the user with a cookie again.
 The plugin sets up dedicated pools and services for each service's node. This
 is required since Perlbal has no way of actually allowing you to specify the
 node a user will go to, only the service. Not to worry, this creation is done
-lazily so it saves as much memory as it can. In the future it might save even
-more.
+lazily so it saves as much memory as it can.
 
 When a user comes in with a cookie of a node that exist in the service's pool
 it will create a pool for it (if one doesn't exist), and a matching service
 for it (if one doesn't exist) and then direct to user to it.
 
 The check against nodes and pools is done live and not against the static
-configuration file. This means that if you're playing some trickery on pools
-(changing them live), it will still work fine.
+configuration file. This means that if you're playing with the pools (changing
+them live, for example), it will still work just fine.
 
 A new service is created using configurations from the existing service. The
 more interesting details is that reuse is emphasized so no new sockets are
 created and instead this new service uses the already existing sockets (along
 with existing connections) instead of firing new ones. It doesn't open a new
-listening or anything like that. This also means your SSL connections work
-seamlessly. Yes, it's insanely cool, I know! :)
+socket for listening or anything like that. This also means your SSL
+connections work seamlessly. Yes, it's insanely cool, I know! :)
 
 =head1 ATTRIBUTES
 
@@ -405,11 +391,6 @@ Registers our events.
 
 Unregister our hooks and setters events.
 
-=head2 get_backend_id
-
-Get a backend ID number. This is currently simply sequential, but will be
-very dynamic in the near future.
-
 =head2 get_ip_port
 
 Parses a request's cookies and finds the specific cookie relating to session
@@ -418,6 +399,12 @@ affinity and get the backend details via the ID in the cookie.
 =head2 find_backend_by_id
 
 Given a SHA1 ID, find the correct backend to which it belongs.
+
+=head2 create_id
+
+Creates a SHA1 checksum ID using L<Digest::SHA>. The checksum is composed
+of the IP, port and salt. If you want to have more predictability, you can
+provide a salt of C<0> or C<string> and then the checksum would be predictable.
 
 =head1 DEPENDENCIES
 
