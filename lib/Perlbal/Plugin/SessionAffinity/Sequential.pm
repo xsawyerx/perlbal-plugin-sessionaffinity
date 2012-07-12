@@ -5,9 +5,10 @@ package Perlbal::Plugin::SessionAffinity::Sequential;
 
 my $ref = ref [];
 
-sub get_backend_id {
-    my ( $backend, $create_id ) = @_;
-    my @nodes   = @{ $backend->{'service'}{'pool'}{'nodes'} };
+sub get_backend {
+    my $backend = shift;
+
+    my @nodes = @{ $backend->{'service'}{'pool'}{'nodes'} };
 
     # find the id of the node
     # (index number, starting from 1)
@@ -20,12 +21,12 @@ sub get_backend_id {
         my ( $ip, $port ) = @{ $nodes[$i] };
 
         if ( $backend->{'ipport'} eq "$ip:$port" ) {
-            return $create_id->( $ip, $port );
+            return [ $ip, $port ];
         }
     }
 
     # default to first backend in node list
-    return $create_id->( @{ $nodes[0] } );
+    return $nodes[0];
 }
 
 1;

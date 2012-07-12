@@ -8,15 +8,9 @@ use Perlbal;
 use CGI::Cookie;
 use Digest::SHA 'sha1_hex';
 
-my $cookie_hdr = 'X-SERVERID';
-my $id_type    = 'Sequential';
-my $salt       = join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
-my $create_id  = sub {
-    my $ip   = shift;
-    my $port = shift || '';
-    return sha1_hex( $salt . $ip . $port );
-};
-
+my $cookie_hdr     = 'X-SERVERID';
+my $id_type        = 'Sequential';
+my $salt           = join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
 my %loaded_classes = ();
 
 sub load {
@@ -78,11 +72,19 @@ sub get_ip_port {
     return;
 }
 
+# create an id from ip and optional port
+sub create_id {
+    my $ip   = shift;
+    my $port = shift || '';
+    return sha1_hex( $salt . $ip . $port );
+}
+
+# using an sha1 checksum id, find the matching backend
 sub find_backend_by_id {
     my ( $svc, $id ) = @_;
 
     foreach my $backend ( @{ $svc->{'pool'}{'nodes'} } ) {
-        my $bid = $create_id->( @{$backend} );
+        my $bid = create_id( @{$backend} );
 
         if ( $bid eq $id ) {
             return $backend;
@@ -106,7 +108,7 @@ sub register {
             my ( $ip, $port ) = @{$node};
 
             # pool
-            my $pid = $create_id->( $ip, $port );
+            my $pid = create_id( $ip, $port );
             exists $Perlbal::pool{$pid} and next;
 
             my $nodepool = Perlbal::Pool->new($pid);
@@ -155,7 +157,7 @@ sub register {
         my $ip_port = get_ip_port( $svc, $req )
             or return 0;
 
-        my $req_pool_id = $create_id->( split /:/, $ip_port );
+        my $req_pool_id = create_id( split /:/, $ip_port );
         my $req_svc     = $Perlbal::service{"${req_pool_id}_service"};
         $client->{'service'} = $req_svc;
 
@@ -187,8 +189,12 @@ sub register {
             $loaded_classes{$class}++;
         }
 
-        my $backend_id = $class->can("get_backend_id")
-                               ->( $backend, $create_id ) || '';
+        # try to find that specific backend
+        # or get a new one
+        my $found_backend = $class->can('get_backend')
+                                  ->($backend);
+
+        my $backend_id = create_id( @{$found_backend} ) || '';
 
         if ( ! defined $cookies{$cookie_hdr} ||
              $cookies{$cookie_hdr}->value ne $backend_id ) {
