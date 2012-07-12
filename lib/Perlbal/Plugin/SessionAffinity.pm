@@ -166,12 +166,13 @@ sub register {
 
     my $set_cookie = sub {
         my $backend = shift; # Perlbal::BackendHTTP
-        my $res     = $backend->{'res_headers'};
-        my $req     = $backend->{'req_headers'};
-        my $svc     = $backend->{'service'};
 
-        defined $backend && defined $res
+        defined $backend && defined $backend->{'res_header'}
             or return 0;
+
+        my $res = $backend->{'res_headers'};
+        my $req = $backend->{'req_headers'};
+        my $svc = $backend->{'service'};
 
         my $backend_id = create_id( split /:/, $backend->{'ipport'} );
         my %cookies    = ();
