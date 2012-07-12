@@ -68,7 +68,7 @@ sub get_ip_port {
         %cookies = CGI::Cookie->parse($cookie);
 
         if ( defined $cookies{$cookie_hdr} ) {
-            my $id      = $cookies{$cookie_hdr}->value;
+            my $id      = $cookies{$cookie_hdr}->value || '';
             my $backend = find_backend_by_id( $svc, $id );
 
             ref $backend and return join ':', @{$backend};
@@ -188,7 +188,7 @@ sub register {
         }
 
         my $backend_id = $class->can("get_backend_id")
-                               ->( $backend, $create_id );
+                               ->( $backend, $create_id ) || '';
 
         if ( ! defined $cookies{$cookie_hdr} ||
              $cookies{$cookie_hdr}->value ne $backend_id ) {
