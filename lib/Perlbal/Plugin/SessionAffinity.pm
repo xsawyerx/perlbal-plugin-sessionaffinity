@@ -11,7 +11,29 @@ use Digest::SHA 'sha1_hex';
 my $cookie_hdr     = 'X-SERVERID';
 my $id_type        = 'Simple';
 my $salt           = join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
+my $arrayref       = ref [];
 my %loaded_classes = ();
+
+# get a full backend object
+# and try to find a node in the backend's pool
+sub find_node {
+    my $backend = shift;
+    my @nodes   = @{ $backend->{'service'}{'pool'}{'nodes'} };
+
+    foreach my $node (@nodes) {
+        defined $node && ref $node && ref $node eq $arrayref
+            or next;
+
+        my ( $ip, $port ) = @{$node};
+
+        if ( $backend->{'ipport'} eq "$ip:$port" ) {
+            return [ $ip, $port ];
+        }
+    }
+
+    # explicit return FTW
+    return;
+}
 
 sub load {
     # the name of header in the cookie that stores the backend ID
@@ -191,10 +213,12 @@ sub register {
 
         # try to find that specific backend
         # or get a new one
-        my $found_backend = $class->can('get_backend')
-                                  ->($backend);
+        my $node = find_node($backend) ||
+                   $class->can('get_backend')
+                         ->($backend)
+            or return 0;
 
-        my $backend_id = create_id( @{$found_backend} ) || '';
+        my $backend_id = create_id( @{$node} ) || '';
 
         if ( ! defined $cookies{$cookie_hdr} ||
              $cookies{$cookie_hdr}->value ne $backend_id ) {
