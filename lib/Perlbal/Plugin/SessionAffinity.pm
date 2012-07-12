@@ -387,8 +387,6 @@ seamlessly. Yes, it's insanely cool, I know! :)
 
 =head1 ATTRIBUTES
 
-These are future attributes:
-
 =head2 affinity_cookie_header
 
 The name of the cookie header for the session.
