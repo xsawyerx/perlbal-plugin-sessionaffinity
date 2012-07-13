@@ -278,7 +278,7 @@ versions of Perlbal.
 
 Unlike the other plugin, which - after close inspection - seemed breakable
 (to say the least, since connect-aheads don't seem to get cleaned up), this
-plugin uses a completely different method which emphesizes correctness and
+plugin uses a completely different method which emphasizes correctness and
 the least intervention with Perlbal itself, and keeps Perlbal in charge of
 the critical operations.
 
