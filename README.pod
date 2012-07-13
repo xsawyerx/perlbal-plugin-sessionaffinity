@@ -6,7 +6,7 @@ Perlbal::Plugin::SessionAffinity - Sane session affinity (sticky sessions) for P
 
 =head1 VERSION
 
-version 0.002
+version 0.003
 
 =head1 SYNOPSIS
 
@@ -38,87 +38,57 @@ use this one and how it works.
 
 =head1 WHY YOU SHOULD USE IT
 
-Here is a list of problems with the other implementation of sticky sessions:
+Here are things that are unique in this plugin. I am comparing this with the
+current available session affinity implementation available on CPAN
+(L<Perlbal::Plugin::StickySessions>).
 
 =over 4
 
-=item * It only supports sticky sessions for files
+=item * It supports session affinity for all requests
 
-The hook it uses for adding cookies only applies to file fetching. This means
-that if you want sticky sessions for anything other than file fetching, you're
-fresh out of luck. :)
+Unlike the other plugin, this one uses a proper hook that supports not just
+file fetching, but for each and every request.
 
-B<However, this plugin> uses (hopefully) the proper hook to accomplish sticky
-sessions on each and every request.
+=item * No patches required
 
-=item * It requires patches
+Unlike the other plugin, that comes with two patches (which were not
+integrated into L<Perlbal> core), this one requires no patches whatsoever.
 
-It depends on patches the author has prepared (that were not integrated) into
-the Perlbal core distribution. This means you need to apply these patches on
-every new version of Perlbal you're installing.
+=item * It's up-to-date
 
-B<However, this plugin> doesn't require B<any> patches.
+Unlike the other plugin, that still requires a patch that includes a hook that
+was already introduced (which shows it's clearly outdated), this plugin is
+very much up to speed with things.
 
-=item * It's outdated
+=item * It's thin and sane
 
-At least one of the patches provided with it is simply unnecessary anymore
-because the hook it adds was already added to Perlbal (at a little different
-location, though). Clearly it hasn't been updated in a while.
+Unlike the other plugin, which is basically copy-pasted from some handling code
+in L<Perlbal> itself (seriously!), this module contains no copy-pasted code,
+is much smaller and leaner, and is much less likely to break between new
+versions of Perlbal.
 
-B<However, this plugin> is up to date.
+=item * No breakage
 
-=item * It's overkill/breakable/copy-pasta/ZOMGWTF?!
+Unlike the other plugin, which - after close inspection - seemed breakable
+(to say the least, since connect-aheads don't seem to get cleaned up), this
+plugin uses a completely different method which emphasizes correctness and
+the least intervention with Perlbal itself, and keeps Perlbal in charge of
+the critical operations.
 
-It has a lot of code that is basically copy-pasted from some handling code in
-L<Perlbal> itself. This means that any code that is changed, needs to be
-updated in the module (every, single, time) which will suddenly become
-incompatible with previous versions.
+=item * Much less security risk
 
-It's a lot of code that mostly likely isn't necessary and instead of
-refactoring where needed, and submit that to Perlbal, it was simply copied
-over, which is more than horrible.
+Unlike the other plugin, which sets a cookie with the backend ID correlating
+to the backend order in the pool, this plugin uses SHA1 checksum IDs (with a
+randomly created salt) for each server, and allows you to change the header
+name and the checksum salt (for those seeking predictability) for the cookie.
 
-B<However, this plugin> is very thin and slim, contains no copy-pasted code
-and will not break future and previous versions every time Perlbal changes
-code.
+This makes it harder for an attacker to understand what the header represents
+and how many backends exist (since there is no counter).
 
-=item * Observed breakage
+=item * Features
 
-After looking into this, it seems as though gentleness is necessary, since
-the connect-ahead doesn't seem to be cleaning up, and more and more closed
-sessions are mounted.
-
-B<However, this plugin> does not use the method, keeping Perlbal itself in
-charge and which allows proper closing and releasing of connections.
-
-=item * Probable security risk
-
-It sets a cookie with a backend ID that correlates to the backend order in
-the pool. This means that you can simply run requests with different backend
-IDs and easily find the number of backends in a pool.
-
-You can also attack by a special-crafted cookie and measure the timings for
-requests to find when it probably does additional processing (since the
-backend is specified) to find how many backends exist in a given pool.
-
-I'll leave finding of more ways to exploit this security risk as an exercise
-to the reader.
-
-B<However, this plugin> uses L<Digest::SHA> with a randomly-created salt
-on each start-up (which the user can explicitly specify, if it seeks
-predictability) to keep the backend ID value in the cookie.
-
-By allowing you to change the cookie header name and the way the value is
-presented, it would be more difficult for an attacker to understand what the
-header represents, and how many backends exist (since there is no counter).
-
-=item * Limited features
-
-It does not provide the user with a way to control how the header name used
-to keep the IDs.
-
-B<However, this plugin> gives the user the ability to pick the header name
-of the backend ID.
+Unlike the other plugin, that simply has things hardcoded, this plugin allows
+to change both the header name and the salt used to create the ID.
 
 =back
 
@@ -220,8 +190,6 @@ To provide croak. It's core, don't worry.
 =head1 SEE ALSO
 
 =head2 Perlbal::Plugin::StickySessions
-
-Try it and see why you would probably prefer this one. :)
 
 =head1 AUTHOR
 
