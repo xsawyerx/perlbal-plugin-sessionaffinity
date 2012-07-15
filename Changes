@@ -1,5 +1,8 @@
 Revision history for Perl extension Perlbal::Plugin::SessionAffinity
 
+0.004   15.07.12
+        * Fix crash caused by "use fields" in Perlbal. Pfff...
+
 0.003   14.07.12
         * Docs reversal.
 
