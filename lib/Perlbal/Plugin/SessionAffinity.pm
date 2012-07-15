@@ -154,8 +154,7 @@ sub register {
     my $set_cookie = sub {
         my $backend = shift; # Perlbal::BackendHTTP
 
-        defined $backend && defined $backend->{'res_header'}
-            or return 0;
+        defined $backend or return 0;
 
         my $res = $backend->{'res_headers'};
         my $req = $backend->{'req_headers'};
