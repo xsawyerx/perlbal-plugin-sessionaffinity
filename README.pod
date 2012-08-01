@@ -6,7 +6,7 @@ Perlbal::Plugin::SessionAffinity - Sane session affinity (sticky sessions) for P
 
 =head1 VERSION
 
-version 0.004
+version 0.005
 
 =head1 SYNOPSIS
 
@@ -78,9 +78,10 @@ the critical operations.
 =item * Much less security risk
 
 Unlike the other plugin, which sets a cookie with the backend ID correlating
-to the backend order in the pool, this plugin uses SHA1 checksum IDs (with a
-randomly created salt) for each server, and allows you to change the header
-name and the checksum salt (for those seeking predictability) for the cookie.
+to the backend order in the pool, this plugin uses SHA1 checksum IDs (with an
+optionally randomly-created salt) for each server, and allows you to change the
+header name and add a checksum salt (whether randomly-created or your own) for
+the cookie.
 
 This makes it harder for an attacker to understand what the header represents
 and how many backends exist (since there is no counter).
@@ -88,7 +89,9 @@ and how many backends exist (since there is no counter).
 =item * Features
 
 Unlike the other plugin, that simply has things hardcoded, this plugin allows
-to change both the header name and the salt used to create the ID.
+to change both the header name and the salt used to create the ID. By default
+the salt is off but you can turn it on and then either use a randomly-created
+one or set your own.
 
 =back
 
@@ -133,6 +136,20 @@ The name of the cookie header for the session.
 
 Default: B<X-SERVERID>.
 
+=head2 affinity_use_salt
+
+Whether to use a salt or not when calculating SHA1 IDs.
+
+    # both are equal
+    affinity_use_salt = 1
+    affinity_use_salt = yes
+
+    # opposite meaning
+    affinity_use_salt = 0
+    affinity_use_salt = no
+
+Default: B<no>.
+
 =head2 affinity_salt
 
 The salt that is used to create the backend's SHA1 IDs.
@@ -142,7 +159,12 @@ L<Perlbal::Plugin::SessionAffinity> to create the salt on start up:
 
     join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
 
-If you want predictability, you can override the salt.
+If you want predictability with salt, you can override it as such:
+
+    affinity_salt = helloworld
+
+    # now the calculation will be:
+    my $sha1 = sha1hex( $salt . $ip . $port );
 
 =head1 SUBROUTINES/METHODS
 
@@ -182,10 +204,6 @@ To parse and create cookies.
 =head2 Digest::SHA
 
 To provide a SHA1 checksum.
-
-=head2 Carp
-
-To provide croak. It's core, don't worry.
 
 =head1 SEE ALSO
 
