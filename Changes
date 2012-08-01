@@ -1,5 +1,11 @@
 Revision history for Perl extension Perlbal::Plugin::SessionAffinity
 
+0.005   01.08.12
+        * Affinity salt is now off by default.
+        * You can now set salt on using AFFINITY_USE_SALT.
+        * Make configurations more relaxed by allowing prefixed spaces.
+        * Remove Carp dependency, it wasn't used.
+
 0.004   15.07.12
         * Fix crash caused by "use fields" in Perlbal. Pfff...
 
