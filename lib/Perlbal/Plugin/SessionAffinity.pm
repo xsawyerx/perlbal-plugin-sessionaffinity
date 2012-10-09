@@ -256,7 +256,7 @@ __END__
 
 L<Perlbal> doesn't support session affinity (or otherwise known as "sticky
 sessions") out of the box. There is a plugin on CPAN called
-L<Perlbal::Plugin::StickySessions> but there's a few problems with it.
+L<Perlbal::Plugin::StickySessions> but there are a few problems with it.
 
 This plugin should be do a much better job. Go ahead and read why you should
 use this one and how it works.
@@ -287,7 +287,7 @@ very much up to speed with things.
 
 =item * It's thin and sane
 
-Unlike the other plugin, which is basically copy-pasted from some handling code
+Unlike the other plugin, which is mostly copy-pasted from some handling code
 in L<Perlbal> itself (seriously!), this module contains no copy-pasted code,
 is much smaller and leaner, and is much less likely to break between new
 versions of Perlbal.
