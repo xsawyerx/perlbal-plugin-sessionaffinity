@@ -45,9 +45,9 @@ sub find_backend_by_id {
     my ( $svc, $id ) = @_;
 
     foreach my $backend ( @{ $svc->{'pool'}{'nodes'} } ) {
-        my $bid = create_id( @{$backend} );
+        my $backendid = create_id( @{$backend} );
 
-        if ( $bid eq $id ) {
+        if ( $backendid eq $id ) {
             return $backend;
         }
     }
@@ -114,18 +114,18 @@ sub register {
             my ( $ip, $port ) = @{$node};
 
             # pool
-            my $pid = create_id( $ip, $port );
-            exists $Perlbal::pool{$pid} and next;
+            my $poolid = create_id( $ip, $port );
+            exists $Perlbal::pool{$poolid} and next;
 
-            my $nodepool = Perlbal::Pool->new($pid);
+            my $nodepool = Perlbal::Pool->new($poolid);
             $nodepool->add( $ip, $port );
-            $Perlbal::pool{$pid} = $nodepool;
+            $Perlbal::pool{$poolid} = $nodepool;
 
             # service
-            my $sid = "${pid}_service";
-            exists $Perlbal::service{$sid} and next;
+            my $serviceid = "${poolid}_service";
+            exists $Perlbal::service{$serviceid} and next;
 
-            my $nodeservice = Perlbal->create_service($sid);
+            my $nodeservice = Perlbal->create_service($serviceid);
             my $svc_role    = $svc->{'role'};
 
             # role sets up constraints for the rest
@@ -155,9 +155,9 @@ sub register {
                 }
             }
 
-            $nodeservice->set( pool => $pid );
+            $nodeservice->set( pool => $poolid );
 
-            $Perlbal::service{$sid} = $nodeservice;
+            $Perlbal::service{$serviceid} = $nodeservice;
         }
 
         my $ip_port = get_ip_port( $svc, $req )
