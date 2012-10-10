@@ -478,11 +478,13 @@ If you want predictability with salt, you can override it as such:
 
 =head2 affinity_use_domain
 
-Whether to use the domain or not when calculating SHA1 IDs.
+Uses domain-mode for finding the backend. This is an alternate way of
+deciding the backend, which enables backends to persist per domain,
+allowing you to avoid a fragmented cache. If you have a lot of cache misses
+because of jumping between backends, try turning this feature on.
 
-This enables backends to persist per domain, allowing you to avoid a fragmented
-cache. If you have a lot of cache misses because of jumping between backends,
-try turning this feature on.
+This feature ignores the cookie provided (and does not provide its own
+cookie) since backends are decided by the domain name alone.
 
     # both are equal
     affinity_use_domain = 1
@@ -513,6 +515,10 @@ affinity and get the backend details via the ID in the cookie.
 
 Given a SHA1 ID, find the correct backend to which it belongs.
 
+=head2 find_backend_by_domain_id
+
+Given a SHA1 ID for a domain, find the correct backend to which it belongs.
+
 =head2 create_id
 
 Creates a SHA1 checksum ID using L<Digest::SHA>. The checksum is composed
@@ -526,6 +532,25 @@ This should make it clear on how it's created:
     } else {
         $checksum = sha1sum( "$ip:$port" );
     }
+
+=head2 create_domain_id
+
+Same concept as the above C<create_id> function, except for the following
+changes:
+
+Accepts a domain and a list of nodes (which is assumed to be ordered), uses the
+C<domain_index> function to get the index in the nodes of a domain and picks
+the correct node from the list it receives by index.
+
+=head2 domain_index
+
+This function tries to fetch an index number for a given domain name. It
+accepts a domain name and the maximum index number.
+
+It translates the domain name to a 7-digit number, sets it as the random seed
+and calls the Perl core C<rand()> function with the max.
+
+When done, it resets the random seed to a new seed.
 
 =head1 DEPENDENCIES
 
