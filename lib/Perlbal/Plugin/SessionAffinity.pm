@@ -48,7 +48,7 @@ sub create_domain_id {
 sub create_id {
     my $ip   = shift;
     my $port = shift || '';
-    my $str  = $use_salt ? $salt . $ip . $port : $ip . $port;
+    my $str  = $use_salt ? $salt . "$ip:$port" : "$ip:$port";
     return sha1_hex($str);
 }
 
@@ -450,6 +450,14 @@ Given a SHA1 ID, find the correct backend to which it belongs.
 Creates a SHA1 checksum ID using L<Digest::SHA>. The checksum is composed
 of the IP, port and salt. If you want to have more predictability, you can
 provide a salt of C<0> or C<string> and then the checksum would be predictable.
+
+This should make it clear on how it's created:
+
+    if ( $has_salt ) {
+        $checksum = sha1sum( $salt . "$ip:$port" );
+    } else {
+        $checksum = sha1sum( "$ip:$port" );
+    }
 
 =head1 DEPENDENCIES
 
