@@ -237,8 +237,12 @@ sub register {
 
             # we're going to override whatever Perlbal found
             # because we only care about the domain
-            my $domain  = $req->{'headers'}{'host'};
-            my $id      = create_domain_id( $domain, @{ $svc->{'pool'}{'nodes'} } );
+            my $domain        = $req->{'headers'}{'host'};
+            my @ordered_nodes = sort {
+                ( join ':', @{$a} ) cmp ( join ':', @{$b} )
+            } @{ $svc->{'pool'}{'nodes'} };
+
+            my $id      = create_domain_id( $domain, @ordered_nodes );
             my $backend = find_backend_by_domain_id( $svc, $id );
             $ip_port = join ':', @{$backend};
         }
