@@ -260,15 +260,11 @@ sub register {
 
         defined $backend or return 0;
 
-        my $res   = $backend->{'res_headers'};
-        my $req   = $backend->{'req_headers'};
-        my $svc   = $backend->{'service'};
-        my @nodes = @{ $svc->{'pool'}{'nodes'} };
-
-        my @ordered_nodes = sort { ( join ':', @{$a} ) cmp ( join ':', @{$b} ) } @nodes;
-        my $domain        = $req->{'headers'}{'host'};
-        my $backend_id    = $use_domain ? create_domain_id( $domain, @ordered_nodes )
-                                        : create_id( split /:/, $backend->{'ipport'} );
+        my $res        = $backend->{'res_headers'};
+        my $req        = $backend->{'req_headers'};
+        my $svc        = $backend->{'service'};
+        my $domain     = $req->{'headers'}{'host'};
+        my $backend_id = create_id( split /:/, $backend->{'ipport'} );
 
         my %cookies = ();
         if ( my $cookie = $req->header('Cookie') ) {
