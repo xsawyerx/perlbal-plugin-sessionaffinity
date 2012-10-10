@@ -10,6 +10,7 @@ use Digest::SHA 'sha1_hex';
 my $cookie_hdr = 'X-SERVERID';
 my $salt       = join q{}, map { $_ = rand 999; s/\.//; $_ } 1 .. 10;
 my $use_salt   = 0;
+my $use_domain = 0;
 
 # get the ip and port of the requested backend from the cookie
 sub get_ip_port {
@@ -147,6 +148,24 @@ sub load {
         },
     );
 
+    Perlbal::register_global_hook(
+        'manage_command.affinity_use_domain', sub {
+            my $mc = shift->parse(qr/^\s*affinity_use_domain\s+=\s+(.+)\s*$/,
+                      "usage: AFFINITY_USE_DOMAIN = <boolean>");
+
+            my ($res) = $mc->args;
+            if ( $res eq 'yes' || $res == 1 ) {
+                $use_domain = 1;
+            } elsif ( $res eq 'no' || $res == 0 ) {
+                $use_domain = 0;
+            } else {
+                die qq"affinity_use_domain must be boolean (yes/no/1/0)";
+            }
+
+            return $mc->ok;
+        },
+    );
+
     return 1;
 }
 
@@ -158,6 +177,7 @@ sub register {
         my $req    = $client->{'req_headers'} or return 0;
         my $svc    = $client->{'service'};
         my $pool   = $svc->{'pool'};
+        my $domain = $req->{'headers'}{'host'};
 
         # make sure all nodes in this service have their own pool
         foreach my $node ( @{ $pool->{'nodes'} } ) {
@@ -210,11 +230,22 @@ sub register {
             $Perlbal::service{$serviceid} = $nodeservice;
         }
 
-        my $ip_port = get_ip_port( $svc, $req )
-            or return 0;
+        my $ip_port = get_ip_port( $svc, $req );
 
-        my $req_pool_id = create_id( split /:/, $ip_port );
-        my $req_svc     = $Perlbal::service{"${req_pool_id}_service"};
+        if ( ! $ip_port ) {
+            $use_domain or return 0;
+
+            # we're going to override whatever Perlbal found
+            # because we only care about the domain
+            my $domain  = $req->{'headers'}{'host'};
+            my $id      = create_domain_id( $domain, @{ $svc->{'pool'}{'nodes'} } );
+            my $backend = find_backend_by_domain_id( $svc, $id );
+            $ip_port = join ':', @{$backend};
+        }
+
+        my ( $ip, $port )    = split /:/, $ip_port;
+        my $req_pool_id      = create_id( $ip, $port );
+        my $req_svc          = $Perlbal::service{"${req_pool_id}_service"};
         $client->{'service'} = $req_svc;
 
         return 0;
@@ -225,13 +256,17 @@ sub register {
 
         defined $backend or return 0;
 
-        my $res = $backend->{'res_headers'};
-        my $req = $backend->{'req_headers'};
-        my $svc = $backend->{'service'};
+        my $res   = $backend->{'res_headers'};
+        my $req   = $backend->{'req_headers'};
+        my $svc   = $backend->{'service'};
+        my @nodes = @{ $svc->{'pool'}{'nodes'} };
 
-        my $backend_id = create_id( split /:/, $backend->{'ipport'} );
-        my %cookies    = ();
+        my @ordered_nodes = sort { ( join ':', @{$a} ) cmp ( join ':', @{$b} ) } @nodes;
+        my $domain        = $req->{'headers'}{'host'};
+        my $backend_id    = $use_domain ? create_domain_id( $domain, @ordered_nodes )
+                                        : create_id( split /:/, $backend->{'ipport'} );
 
+        my %cookies = ();
         if ( my $cookie = $req->header('Cookie') ) {
             %cookies = CGI::Cookie->parse($cookie);
         }
@@ -440,6 +475,24 @@ If you want predictability with salt, you can override it as such:
 
     # now the calculation will be:
     my $sha1 = sha1hex( $salt . $ip . $port );
+
+=head2 affinity_use_domain
+
+Whether to use the domain or not when calculating SHA1 IDs.
+
+This enables backends to persist per domain, allowing you to avoid a fragmented
+cache. If you have a lot of cache misses because of jumping between backends,
+try turning this feature on.
+
+    # both are equal
+    affinity_use_domain = 1
+    affinity_use_domain = yes
+
+    # opposite meaning
+    affinity_use_domain = 0
+    affinity_use_domain = no
+
+Default: B<no>.
 
 =head1 SUBROUTINES/METHODS
 
