@@ -90,6 +90,21 @@ sub find_backend_by_id {
     return;
 }
 
+# TODO: refactor this function
+sub find_backend_by_domain_id {
+    my ( $svc, $id ) = @_;
+
+    foreach my $backend ( @{ $svc->{'pool'}{'nodes'} } ) {
+        my $backendid = create_id( @{$backend} );
+
+        if ( $backendid eq $id ) {
+            return $backend;
+        }
+    }
+
+    return;
+}
+
 sub load {
     # the name of header in the cookie that stores the backend ID
     Perlbal::register_global_hook(
