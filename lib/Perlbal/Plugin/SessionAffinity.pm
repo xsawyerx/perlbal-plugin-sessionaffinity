@@ -40,6 +40,29 @@ sub create_id {
     return sha1_hex($str);
 }
 
+# a nifty little trick:
+# we create a numeric value of the domain name
+# then we use that as a seed for the random function
+# then create a random number which is predictable
+# that is the index of the domain
+sub domain_index {
+    my $domain = shift;
+    my $max    = shift;
+    my $seed   = '';
+
+    foreach my $char ( split //, $domain, 7 ) {
+        $seed .= ord $char;
+    }
+
+    # set srand
+    srand($seed);
+    my $index = int rand($max);
+
+    # seed again randomly
+    srand();
+    return $index;
+}
+
 # using an sha1 checksum id, find the matching backend
 sub find_backend_by_id {
     my ( $svc, $id ) = @_;
