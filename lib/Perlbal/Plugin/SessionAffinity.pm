@@ -32,6 +32,18 @@ sub get_ip_port {
     return;
 }
 
+# create a domain ID
+sub create_domain_id {
+    my $domain = shift || '';
+    my @nodes  = @_;
+
+    # the ID is determined by the specific server
+    # that has the matching index for the domain
+    my $index = domain_index( $domain, scalar @nodes );
+    my $node  = join ':', @{ $nodes[$index] };
+    return sha1_hex( $use_salt ? $salt . $node : $node );
+}
+
 # create an id from ip and optional port
 sub create_id {
     my $ip   = shift;
