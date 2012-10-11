@@ -61,19 +61,13 @@ sub create_id {
 sub domain_index {
     my $domain = shift;
     my $max    = shift;
-    my $seed   = '';
+    my $seed   = 0;
 
-    foreach my $char ( split //, $domain, 7 ) {
-        $seed .= ord $char;
+    foreach my $char ( split //, $domain ) {
+        $seed += ord $char;
     }
 
-    # set srand
-    srand($seed);
-    my $index = int rand($max);
-
-    # seed again randomly
-    srand();
-    return $index;
+    return ( $seed % $max);
 }
 
 # using an sha1 checksum id, find the matching backend
@@ -547,10 +541,7 @@ the correct node from the list it receives by index.
 This function tries to fetch an index number for a given domain name. It
 accepts a domain name and the maximum index number.
 
-It translates the domain name to a 7-digit number, sets it as the random seed
-and calls the Perl core C<rand()> function with the max.
-
-When done, it resets the random seed to a new seed.
+It translates the domain name to a long number, and uses mod (C<%>) on it.
 
 =head1 DEPENDENCIES
 
