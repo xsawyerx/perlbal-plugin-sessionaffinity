@@ -1,5 +1,9 @@
 Revision history for Perl extension Perlbal::Plugin::SessionAffinity
 
+0.006   11.10.12
+        * Add "domain mode" - use_domain to handle fragmented cache.
+        * Doc fixes/cleanups.
+
 0.005   01.08.12
         * Affinity salt is now off by default.
         * You can now set salt on using AFFINITY_USE_SALT.
