@@ -230,9 +230,9 @@ sub register {
 
             # we're going to override whatever Perlbal found
             # because we only care about the domain
-            my $domain = ref $req eq 'HASH'        ?
-                         $req->{'headers'}{'host'} : # PP version
-                         $req->getHeader('host');    # XS version
+            my $domain = ref $req eq 'Perlbal::XS::HTTPHeaders' ?
+                         $req->getHeader('host')                : # XS version
+                         $req->{'headers'}{'host'};               # PP version
 
             my @ordered_nodes = sort {
                 ( join ':', @{$a} ) cmp ( join ':', @{$b} )
