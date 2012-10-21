@@ -1,5 +1,8 @@
 Revision history for Perl extension Perlbal::Plugin::SessionAffinity
 
+0.007   21.10.12
+        * Handle Perlbal::XS::HTTPHeaders too.
+
 0.006   11.10.12
         * Add "domain mode" - use_domain to handle fragmented cache.
         * Doc fixes/cleanups.
