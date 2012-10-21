@@ -1,5 +1,8 @@
 Revision history for Perl extension Perlbal::Plugin::SessionAffinity
 
+0.008   21.10.12
+        * Fix breakage of non-XS headers.
+
 0.007   21.10.12
         * Handle Perlbal::XS::HTTPHeaders too.
 
