@@ -218,6 +218,15 @@ sub register {
                 }
             }
 
+            # restricted hashes are stupid
+            # so we have to use the API to add them
+            foreach my $hook_name ( keys %{ $svc->{'hooks'} } ) {
+                foreach my $set ( @{ $svc->{'hooks'}{$hook_name} } ) {
+                    my ( $plugin, $sub ) = @{$set};
+                    $nodeservice->register_hook( $plugin, $hook_name, $sub );
+                }
+            }
+
             $nodeservice->set( pool => $poolid );
 
             $Perlbal::service{$serviceid} = $nodeservice;
