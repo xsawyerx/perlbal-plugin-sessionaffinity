@@ -4,6 +4,7 @@ package Perlbal::Plugin::SessionAffinity;
 # ABSTRACT: Sane session affinity (sticky sessions) for Perlbal
 
 use Perlbal;
+use Hash::Util;
 use CGI::Cookie;
 use Digest::SHA 'sha1_hex';
 
@@ -226,6 +227,10 @@ sub register {
                     $nodeservice->register_hook( $plugin, $hook_name, $sub );
                 }
             }
+
+            # I can't believe we have to do this
+            Hash::Util::unlock_keys( %{$nodeservice} );
+            $nodeservice->{'_previous_name'} = $svc->{'name'};
 
             $nodeservice->set( pool => $poolid );
 
