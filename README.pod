@@ -1,12 +1,14 @@
 =pod
 
+=encoding UTF-8
+
 =head1 NAME
 
 Perlbal::Plugin::SessionAffinity - Sane session affinity (sticky sessions) for Perlbal
 
 =head1 VERSION
 
-version 0.010
+version 0.100
 
 =head1 SYNOPSIS
 
@@ -288,7 +290,7 @@ Sawyer X <xsawyerx@cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by Sawyer X.
+This software is copyright (c) 2014 by Sawyer X.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
