@@ -1,5 +1,9 @@
 Revision history for Perl extension Perlbal::Plugin::SessionAffinity
 
+0.100   15.09.14
+        * Craziness ensued. You can now have almost-random cookie names
+          based on the request's domain.
+
 0.010   18.12.13
         * Copy over extra_config and extra_headers from the original service.
         * Document possible incompatibilities.
