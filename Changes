@@ -1,5 +1,8 @@
 Revision history for Perl extension Perlbal::Plugin::SessionAffinity
 
+0.101   14.10.16
+        * Provide a META.json file.
+
 0.100   15.09.14
         * Craziness ensued. You can now have almost-random cookie names
           based on the request's domain.
