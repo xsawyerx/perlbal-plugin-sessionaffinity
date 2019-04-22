@@ -8,7 +8,7 @@ Perlbal::Plugin::SessionAffinity - Sane session affinity (sticky sessions) for P
 
 =head1 VERSION
 
-version 0.101
+version 0.110
 
 =head1 SYNOPSIS
 
@@ -290,7 +290,7 @@ Sawyer X <xsawyerx@cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2016 by Sawyer X.
+This software is copyright (c) 2019 by Sawyer X.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
