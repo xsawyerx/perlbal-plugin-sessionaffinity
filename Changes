@@ -8,6 +8,7 @@ Revision history for Perl extension Perlbal::Plugin::SessionAffinity
         * GH #1: Handle tunable values for services that were stored as
           arrayrefs by flattening them to comma-separated values.
           (Slaven Rezić)
+        * Tests less verbose.
 
 0.101   14.10.16
         * Provide a META.json file.
