@@ -254,7 +254,13 @@ sub register {
                 my $role    = $tunable->{'check_role'};
 
                 if ( $role eq '*' || $role eq $svc_role ) {
-                    $nodeservice->set( $tunable_name, $svc->{$tunable_name} );
+                    my $value = ref $svc->{$tunable_name};
+
+                    # It might be an arrayref
+                    $value eq 'ARRAY'
+                        and $value = join '', @{$value};
+
+                    $nodeservice->set( $tunable_name, $value );
                 }
             }
 
