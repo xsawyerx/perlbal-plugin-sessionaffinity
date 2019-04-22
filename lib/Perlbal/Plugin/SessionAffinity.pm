@@ -245,7 +245,10 @@ sub register {
                 $tunable_name eq 'pool' and next;
 
                 # make sure svc has value for this tunable
-                defined $svc->{$tunable_name} or next;
+                # we use 'exists' first because if it's an unknown key
+                # in a lock hash, it will crash with 'disallowed key' access
+                exists $svc->{$tunable_name} && defined $svc->{$tunable_name}
+                    or next;
 
                 my $tunable = $Perlbal::Service::tunables->{$tunable_name};
                 my $role    = $tunable->{'check_role'};
