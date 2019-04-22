@@ -1,6 +1,6 @@
+package Perlbal::Plugin::SessionAffinity;
 use strict;
 use warnings;
-package Perlbal::Plugin::SessionAffinity;
 # ABSTRACT: Sane session affinity (sticky sessions) for Perlbal
 
 use Perlbal;
